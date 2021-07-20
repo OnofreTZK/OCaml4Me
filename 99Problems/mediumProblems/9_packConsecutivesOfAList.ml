@@ -3,8 +3,19 @@
 let rec pack = function
   | [] -> []
   | [element] -> [[element]]
-  | hd :: tl ->  if hd = List.hd tl then [[hd] @ [List.hd tl]] @ pack (List.tl tl) 
+  | hd :: tl ->  if hd = List.hd tl then [[hd] @ [List.hd tl]] @ pack (List.tl tl)  
                  else [[hd]] @ pack tl;;
+
+(** My Solution on second try - Almost!! *)
+
+let pack2 list =
+  let rec aux count = function
+    | [] -> []
+    | [element] -> [[element]]
+    | hd :: tl -> if hd = List.hd tl then [[hd] @ List.hd (aux (count + 1) tl)] @ aux (count + 1) (List.tl tl)
+                  else if hd <> List.hd tl && count > 1 then [hd] :: aux 1 tl
+                  else [[hd]] @ aux 1 tl in
+  aux 1 list;;
 
 (** Need to understand what exactly the cons operator do... *)
 
