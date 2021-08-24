@@ -1,5 +1,6 @@
 open Opium
 
+(* Abstract type user *)
 module User = struct
 
   type t = 
@@ -17,24 +18,40 @@ module User = struct
       | `Assoc [ ("name", `String name); ("username", `String username); 
                  ("email", `String email); ("password", `String password) ] -> { name; username; 
                                                                                  email; password }
-    | _ -> failwith "invalid person json"
+      | _ -> failwith "invalid user json"
   ;;
+
 end
 
+(* List of users *)
+(*let users = ref []*)
+
+let print_query_params req =
+  let name = Router.param req "name" in
+  let username = Router.param req "username" in
+  let email = Router.param req "email" in
+  let password = Router.param req "password" in
+  let user = {User.name; username; email; password} |> User.yojson_of_t in
+  Lwt.return (Response.of_json user)
+
+let (let*) = Lwt.bind
 
 let create_user req =
-  let open Lwt.Syntax in
-  let+ json = Request.to_json_exn req in
+  let* json = Request.to_json_exn req in
   let user = User.t_of_yojson json in
-  Logs.info (fun u -> u "User signed up! -> %s\n" user.User.name);
-  Response.of_json ( `Assoc ["message", `String "Successful signed up"])
+  let response = 
+    try 
+      (Response.of_json (User.yojson_of_t user)) (* Ternary like *)
+    with err -> 
+      err
+      |> fun _ -> (Response.make ~status: `Service_unavailable ())
+  in
+  Lwt.return response
 ;;
-
-
 
 let _ = 
   App.empty
-  |> App.port 8000
   |> App.post "/user/create" create_user
+  |> App.get "/user/test/:name/:username/:email/:password" print_query_params
   |> App.run_command 
 ;;
