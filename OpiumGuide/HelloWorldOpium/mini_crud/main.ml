@@ -21,10 +21,19 @@ module User = struct
       | _ -> failwith "invalid user json"
   ;;
 
+
+  let ljson_of_list list =
+    let rec aux acc = function
+      | [] -> acc
+      | [usr] -> aux ((Yojson.Basic.to_string (yojson_of_t usr)) ^ acc) []
+      | hd :: tl -> aux ((Yojson.Basic.to_string (yojson_of_t hd)) ^ acc) tl in
+    aux "" list
+  ;;
+
 end
 
 (* List of users *)
-(*let users = ref []*)
+let users = ref []
 
 let print_query_params req =
   let name = Router.param req "name" in
@@ -43,37 +52,28 @@ let create_user req =
   let user = User.t_of_yojson json in
   let response = 
     try 
-      (Response.of_json (User.yojson_of_t user)) (* Ternary like *)
+      users := user :: !users;
+      Response.of_json (User.yojson_of_t user)
     with err -> 
       err
       |> fun _ -> (Response.make ~status: `Service_unavailable ())
   in
-  Lwt.return response
+  Lwt.return response (* Without 201 status yet *)
 ;; 
 
-
-(*
-let create_user req =
-  let open Lwt.Syntax in (* to await Yojson type to Yojson.Safe.t *)
-  let+ json = Request.to_json_exn req in
-  let user = User.t_of_yojson json in
-  Response.of_json (`Assoc [ "message", `String user.User.name ])
+(* TODO Fix to return a json and not string *)
+let read_all_users req =
+  let ls = !users in
+  let json_str = User.ljson_of_list ls in
+  let response = Response.make ~status:`OK ~body:(Body.of_string json_str) () in
+  req |> fun _req -> Lwt.return response
 ;;
-*)
-
-(*
-let create_user req =
-  req
-  |> Request.to_json
-  |> fun _json -> Lwt.return (Response.make ~body:(Body.of_string "Received response") ())
-;;
-*)
-(**************************************************************************************************)
 
 
 let _ = 
   App.empty
-  |> App.post "/user" create_user
+  |> App.post "/user/create" create_user
+  |> App.get "/user/list" read_all_users 
   |> App.get "/user/test/:name/:username/:email/:password" print_query_params
   |> App.run_command 
 ;;
