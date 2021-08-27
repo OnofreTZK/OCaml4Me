@@ -1,5 +1,5 @@
 open Opium
-open User
+open User_yojson
 
 (* List of users *)
 let users = ref []
@@ -9,7 +9,7 @@ let print_query_params req =
   let username = Router.param req "username" in
   let email = Router.param req "email" in
   let password = Router.param req "password" in
-  let user = {User.name; username; email; password} |> User.yojson_of_t in
+  let user = {UserJson.name; username; email; password} |> UserJson.to_yojson in
   Lwt.return (Response.of_json user)
 
 (* POST request -> Figured out the problem: The send type on postman 
@@ -18,14 +18,18 @@ let ( let* ) = Lwt.bind
 
 let create_user req =
   let* json = Request.to_json_exn req in
-  let user = User.t_of_yojson json in
+  let user = 
+    match UserJson.of_yojson json with
+    | Ok usr -> usr
+    | Error err -> raise (Invalid_argument err)
+  in
   let response = 
     try 
       users := user :: !users;
-      Response.of_json (User.yojson_of_t user)
+      Response.of_json (UserJson.to_yojson user)
     with err -> 
       err
-      |> fun _ -> (Response.make ~status: `Service_unavailable ())
+      |> fun _ -> (Response.make ~status: `Bad_request ())
   in
   Lwt.return response (* Without 201 status yet *)
 ;; 
@@ -33,7 +37,7 @@ let create_user req =
 (* TODO Fix to return a json and not string *)
 let read_all_users req =
   let ls = !users in
-  let json = User.ljson_of_list ls in
+  let json = [%to_yojson: UserJson.t list] ls in
   let response = Response.of_json json in
   req |> fun _req -> Lwt.return response
 ;;
