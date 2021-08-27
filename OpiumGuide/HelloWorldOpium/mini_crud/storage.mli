@@ -1,6 +1,9 @@
-(*open User
+open User_yojson
 
-val read_all_users : Yojson.Safe.t Lwt.t
 
-val insert_user : User.t -> unit Lwt.t
-*)
+val get_users : UserJson.t list Lwt.t
+
+val read_users : Yojson.Safe.t Lwt.t
+
+val insert_user : UserJson.t -> unit Lwt.t
+

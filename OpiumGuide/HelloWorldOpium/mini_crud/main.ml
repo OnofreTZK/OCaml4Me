@@ -1,8 +1,9 @@
 open Opium
 open User_yojson
+(*open Storage*)
 
 (* List of users *)
-let users = ref []
+(*let users = ref []*)
 
 let print_query_params req =
   let name = Router.param req "name" in
@@ -18,28 +19,21 @@ let ( let* ) = Lwt.bind
 
 let create_user req =
   let* json = Request.to_json_exn req in
-  let user = 
-    match UserJson.of_yojson json with
-    | Ok usr -> usr
-    | Error err -> raise (Invalid_argument err)
-  in
   let response = 
-    try 
-      users := user :: !users;
-      Response.of_json (UserJson.to_yojson user)
-    with err -> 
-      err
-      |> fun _ -> (Response.make ~status: `Bad_request ())
+    match UserJson.of_yojson json with
+    (*users := user :: !users;*) 
+    | Ok usr -> usr |> Storage.insert_user |> fun _ -> Response.of_json (UserJson.to_yojson usr)
+    | Error err -> err |> fun _ -> Response.make ~status: `Bad_request ()
   in
-  Lwt.return response (* Without 201 status yet *)
+  Lwt.return response
 ;; 
 
 (* TODO Fix to return a json and not string *)
 let read_all_users req =
-  let ls = !users in
-  let json = [%to_yojson: UserJson.t list] ls in
+  let open Lwt.Syntax in
+  let+ json = Storage.read_users in
   let response = Response.of_json json in
-  req |> fun _req -> Lwt.return response
+  req |> fun _req -> response
 ;;
 
 
