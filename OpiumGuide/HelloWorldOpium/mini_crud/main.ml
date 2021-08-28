@@ -1,6 +1,5 @@
 open Opium
 open User_yojson
-(*open Storage*)
 
 (* List of users *)
 (*let users = ref []*)
@@ -15,9 +14,9 @@ let print_query_params req =
 
 (* POST request -> Figured out the problem: The send type on postman 
  * In postman only work if i send a raw json post request *)
-let ( let* ) = Lwt.bind
 
 let create_user req =
+  let open Lwt.Syntax in
   let* json = Request.to_json_exn req in
   let response = 
     match UserJson.of_yojson json with
@@ -31,9 +30,10 @@ let create_user req =
 (* TODO Fix to return a json and not string *)
 let read_all_users req =
   let open Lwt.Syntax in
-  let+ json = Storage.read_users in
+  let* user_list = Storage.get_users () in
+  let json = [%to_yojson: UserJson.t list] user_list in
   let response = Response.of_json json in
-  req |> fun _req -> response
+  req |> fun _req -> Lwt.return response
 ;;
 
 
