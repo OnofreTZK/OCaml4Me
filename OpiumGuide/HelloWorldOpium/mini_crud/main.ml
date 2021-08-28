@@ -27,7 +27,6 @@ let create_user req =
   Lwt.return response
 ;; 
 
-(* TODO Fix to return a json and not string *)
 let read_all_users req =
   let open Lwt.Syntax in
   let* user_list = Storage.get_users () in
