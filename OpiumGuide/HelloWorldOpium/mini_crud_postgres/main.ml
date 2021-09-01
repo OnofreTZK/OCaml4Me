@@ -5,11 +5,12 @@ open User_yojson
 (*let users = ref []*)
 
 let print_query_params req =
+  let id = 0 in
   let name = Router.param req "name" in
   let username = Router.param req "username" in
   let email = Router.param req "email" in
   let password = Router.param req "password" in
-  let user = {UserJson.name; username; email; password} |> UserJson.to_yojson in
+  let user = {id; UserJson.name; username; email; password} |> UserJson.to_yojson in
   Lwt.return (Response.of_json user)
 
 (* POST request -> Figured out the problem: The send type on postman 
