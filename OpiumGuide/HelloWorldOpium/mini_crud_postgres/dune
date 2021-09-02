@@ -1,4 +1,4 @@
 (executable
  (name main)
- (libraries opium caqti caqti-lwt caqti-driver-postgresql)
- (preprocess (pps ppx_deriving_yojson lwt_ppx)))
+ (libraries opium caqti caqti-lwt caqti-driver-postgresql uuidm ppx_rapper_lwt)
+ (preprocess (pps ppx_deriving_yojson lwt_ppx ppx_rapper)))

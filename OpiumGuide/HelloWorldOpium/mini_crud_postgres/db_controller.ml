@@ -1,8 +1,11 @@
-(*open User_yojson*)
+open User_yojson
 
+(* SETUP *)
+(**************************************************************************************************)
 (* Postgres port address *)
 let connection_url = "postgresql://localhost:5432";;
 
+(* Our custom error *)
 type error =
   | Database_error of string
 
@@ -13,20 +16,29 @@ let pool =
   | Ok pool -> pool
   | Error err -> failwith (Caqti_error.show err)
 
-(*
-type error =
-  | Database_error of string
-*)
-
 (* Helper method to map Caqti errors to our own error type. 
-   val or_error : ('a, [> Caqti_error.t ]) result Lwt.t -> ('a, error) result Lwt.t *)
-let or_error m =
+   val data_or_error : ('a, [> Caqti_error.t ]) result Lwt.t -> ('a, error) result Lwt.t *)
+(*
+let data_or_error m =
   match%lwt m with
   | Ok a -> Ok a |> Lwt.return
   | Error e -> Error (Database_error (Caqti_error.show e)) |> Lwt.return
+*)
+(**************************************************************************************************)
 
 (* Queries *)
+
+(* Generic exec function *)
+let dispatch func =
+  let open Lwt.Syntax in
+  let* request_result = Caqti_lwt.Pool.use func pool in
+  match request_result with
+  | Ok data -> Lwt.return data
+  | Error err -> Lwt.fail (Failure (Caqti_error.show err))
+
 (* Create table request *)
+
+(* Without rapper
 let migrate_query =
   Caqti_request.exec
     Caqti_type.unit
@@ -38,15 +50,38 @@ let migrate_query =
           password VARCHAR
        )
     |}
+   *)
+
+let migrate =
+  [%rapper
+    execute
+    {sql| CREATE TABLE IF NOT EXISTS users (
+          id SERIAL NOT NULL PRIMARY KEY,
+          name VARCHAR,
+          username VARCHAR,
+          email VARCHAR,
+          password VARCHAR
+       )
+    |sql}]
+    ()
 
 (* Exec migration *)
+let () = dispatch migrate |> Lwt_main.run
+
+(*
 let migrate () =
-  let migrate' (module C : Caqti_lwt.CONNECTION) =
-    C.exec migrate_query ()
+  let query = migrate_query
   in
-  Caqti_lwt.Pool.use migrate' pool |> or_error
+  let migrate' (module C : Rapper_helper.CONNECTION) =
+    match query with
+    | Ok q -> C.exec q
+    | Error err -> Lwt.fail (Query_failed (Caqti_error.show err))
+  in
+  Caqti_lwt.Pool.use migrate' pool |> data_or_error
+*)
 
 (* Drop table request*)
+(*
 let rollback_query =
   Caqti_request.exec
     Caqti_type.unit
@@ -54,31 +89,45 @@ let rollback_query =
 
 (* Exec dropping *)
 let rollback () =
-  let rollback' (module C : Caqti_lwt.CONNECTION) =
+  let rollback' (module C : Rapper_helper.CONNECTION) =
     C.exec rollback_query ()
   in
-  Caqti_lwt.Pool.use rollback' pool |> or_error
+  Caqti_lwt.Pool.use rollback' pool |> data_or_error
+*)
+
 
 (* get_all query *)
 (*************************************************************************************************)
+(* Without rapper
 let get_all_query = 
   Caqti_request.collect
     Caqti_type.unit 
     Caqti_type.(tup5 int string string string string )
     "SELECT * FROM users"
-
+   *)
 
 let get_all () = 
-  let get_all' (module C : Caqti_lwt.CONNECTION) =
-    C.fold get_all_query (fun (id, name, username, email, password) acc ->
-        {id; name; username; email; password} :: acc
-      ) () []
-  in
-  Caqti_lwt.Pool.use get_all' pool |> or_error (* Pipe the result pattern *)
+ let read_all =
+    [%rapper
+      get_many
+        {sql|
+          SELECT @int{id}, @string{name}, @string{username}, @string{email}, @string{password}
+          FROM users
+        |sql}
+        record_out]
+      ()
+ in
+ let open Lwt.Syntax in
+ let* users_list = dispatch read_all
+ in
+ users_list 
+ |> List.map (fun (id, name, username, email, password) -> {id; name; username; email; password})
+ |> Lwt.return
 (*************************************************************************************************)
 
 (* add query *)
 (*************************************************************************************************)
+(*
 let add_query =
   Caqti_request.exec
     Caqti_type.tup5
@@ -88,8 +137,9 @@ let add user =
   let add' user (module C : Caqti_lwt.CONNECTION) =
     C.exec add_query user
   in
-  Caqti_lwt.Pool.use (add' user) pool |> or_erro (* Pipe the result pattern *)
+  Caqti_lwt.Pool.use (add' user) pool |> or_error (* Pipe the result pattern *)
+*)
 (*************************************************************************************************)
-
+let add _user = failwith "Not implemented"
 let remove _id = failwith "Not implemented"
 let clear () = failwith "Not implemented"
