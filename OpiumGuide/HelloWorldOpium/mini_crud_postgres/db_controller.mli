@@ -5,7 +5,7 @@ type error =
 
 (* Migrations-related helper functions. *)
 val migrate : unit -> (unit, error) result Lwt.t
-val rollback : unit -> (unit, error) result Lwt.t
+(* val rollback : unit -> (unit, error) result Lwt.t *)
 
 (* Core functions *)
 val get_all : unit -> (UserJson.t list, error) result Lwt.t

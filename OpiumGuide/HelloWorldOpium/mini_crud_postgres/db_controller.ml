@@ -2,6 +2,9 @@ open User_yojson
 
 (* SETUP *)
 (**************************************************************************************************)
+
+exception Query_failed of string
+
 (* Postgres port address *)
 let connection_url = "postgresql://localhost:5432";;
 
@@ -24,6 +27,8 @@ let data_or_error m =
   | Ok a -> Ok a |> Lwt.return
   | Error e -> Error (Database_error (Caqti_error.show e)) |> Lwt.return
 *)
+
+type stored_user = {id : string; name : string; username : string; email : string; password: string}
 (**************************************************************************************************)
 
 (* Queries *)
@@ -34,7 +39,7 @@ let dispatch func =
   let* request_result = Caqti_lwt.Pool.use func pool in
   match request_result with
   | Ok data -> Lwt.return data
-  | Error err -> Lwt.fail (Failure (Caqti_error.show err))
+  | Error err -> Lwt.fail (Query_failed (Caqti_error.show err))
 
 (* Create table request *)
 
@@ -111,7 +116,7 @@ let get_all () =
     [%rapper
       get_many
         {sql|
-          SELECT @int{id}, @string{name}, @string{username}, @string{email}, @string{password}
+          SELECT @string{id}, @string{name}, @string{username}, @string{email}, @string{password}
           FROM users
         |sql}
         record_out]
@@ -121,7 +126,7 @@ let get_all () =
  let* users_list = dispatch read_all
  in
  users_list 
- |> List.map (fun (id, name, username, email, password) -> {id; name; username; email; password})
+ |> List.map (fun {id; name; username; email; password} -> {id; name; username; email; password})
  |> Lwt.return
 (*************************************************************************************************)
 
