@@ -2,8 +2,7 @@
 module UserJson = struct
    
   type t = 
-    { id : int;
-      name : string;
+    { name : string;
       username : string;
       email : string;
       password : string

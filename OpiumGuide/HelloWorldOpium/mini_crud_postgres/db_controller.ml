@@ -122,11 +122,12 @@ let get_all () =
         record_out]
       ()
  in
- let open Lwt.Syntax in
+ let open Lwt.Syntax 
+ in
  let* users_list = dispatch read_all
  in
  users_list 
- |> List.map (fun {id; name; username; email; password} -> {id; name; username; email; password})
+ |> List.map (fun {name; username; email; password; _ } -> {UserJson.name; username; email; password})
  |> Lwt.return
 (*************************************************************************************************)
 
@@ -144,7 +145,20 @@ let add user =
   in
   Caqti_lwt.Pool.use (add' user) pool |> or_error (* Pipe the result pattern *)
 *)
+
+let add ({name; username; email; password} : UserJson.t) =
+  let insert =
+    [%rapper
+      execute
+        {sql|
+          INSERT INTO users
+          VALUES(%string{id}, %string{name}, %string{username}, %string{email}, %string{email}, %string{password})
+        |sql}
+        record_in]
+  in
+  let id = Uuidm.create `V4 |> Uuidm.to_string in
+  dispatch (insert {id; name; username; email; password})
 (*************************************************************************************************)
-let add _user = failwith "Not implemented"
+
 let remove _id = failwith "Not implemented"
 let clear () = failwith "Not implemented"

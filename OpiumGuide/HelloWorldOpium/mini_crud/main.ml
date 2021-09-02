@@ -14,7 +14,6 @@ let print_query_params req =
 
 (* POST request -> Figured out the problem: The send type on postman 
  * In postman only work if i send a raw json post request *)
-
 let create_user req =
   let open Lwt.Syntax in
   let* json = Request.to_json_exn req in
@@ -27,6 +26,7 @@ let create_user req =
   Lwt.return response
 ;; 
 
+(* GET request *)
 let read_all_users req =
   let open Lwt.Syntax in
   let* user_list = Storage.get_users () in

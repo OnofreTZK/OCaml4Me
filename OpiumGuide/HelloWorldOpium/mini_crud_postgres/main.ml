@@ -5,12 +5,11 @@ open User_yojson
 (*let users = ref []*)
 
 let print_query_params req =
-  let id = 0 in
   let name = Router.param req "name" in
   let username = Router.param req "username" in
   let email = Router.param req "email" in
   let password = Router.param req "password" in
-  let user = {id; UserJson.name; username; email; password} |> UserJson.to_yojson in
+  let user = {UserJson.name; username; email; password} |> UserJson.to_yojson in
   Lwt.return (Response.of_json user)
 
 (* POST request -> Figured out the problem: The send type on postman 
@@ -31,10 +30,7 @@ let create_user req =
 let read_all_users req =
   let open Lwt.Syntax in
   let* user_list = Db_controller.get_all () in
-  let json = match user_list with
-    | Ok ls -> [%to_yojson: UserJson.t list] ls
-    | Error err -> err |> raise (Invalid_argument "Database error!")
-  in
+  let json = [%to_yojson: UserJson.t list] user_list in
   let response = Response.of_json json in
   req |> fun _req -> Lwt.return response
 ;;
