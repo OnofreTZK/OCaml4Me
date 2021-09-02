@@ -59,9 +59,37 @@ let rollback () =
   in
   Caqti_lwt.Pool.use rollback' pool |> or_error
 
+(* get_all query *)
+(*************************************************************************************************)
+let get_all_query = 
+  Caqti_request.collect
+    Caqti_type.unit 
+    Caqti_type.(tup5 int string string string string )
+    "SELECT * FROM users"
 
-(* Stub these out for now. *)
-let get_all () = failwith "Not implemented"
-let add _content = failwith "Not implemented"
+
+let get_all () = 
+  let get_all' (module C : Caqti_lwt.CONNECTION) =
+    C.fold get_all_query (fun (id, name, username, email, password) acc ->
+        {id; name; username; email; password} :: acc
+      ) () []
+  in
+  Caqti_lwt.Pool.use get_all' pool |> or_error (* Pipe the result pattern *)
+(*************************************************************************************************)
+
+(* add query *)
+(*************************************************************************************************)
+let add_query =
+  Caqti_request.exec
+    Caqti_type.tup5
+    "INSERT INTO users (user) VALUES (?)"
+
+let add user = 
+  let add' user (module C : Caqti_lwt.CONNECTION) =
+    C.exec add_query user
+  in
+  Caqti_lwt.Pool.use (add' user) pool |> or_erro (* Pipe the result pattern *)
+(*************************************************************************************************)
+
 let remove _id = failwith "Not implemented"
 let clear () = failwith "Not implemented"

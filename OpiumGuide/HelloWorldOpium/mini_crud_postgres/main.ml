@@ -22,7 +22,7 @@ let create_user req =
   let response = 
     match UserJson.of_yojson json with
     (*users := user :: !users;*) 
-    | Ok usr -> usr |> Storage.insert_user |> fun _ -> Response.of_json (UserJson.to_yojson usr)
+    | Ok usr -> usr |> Db_controller.add |> fun _ -> Response.of_json (UserJson.to_yojson usr)
     | Error err -> err |> fun _ -> Response.make ~status: `Bad_request ()
   in
   Lwt.return response
@@ -30,8 +30,11 @@ let create_user req =
 
 let read_all_users req =
   let open Lwt.Syntax in
-  let* user_list = Storage.get_users () in
-  let json = [%to_yojson: UserJson.t list] user_list in
+  let* user_list = Db_controller.get_all () in
+  let json = match user_list with
+    | Ok ls -> [%to_yojson: UserJson.t list] ls
+    | Error err -> err |> raise (Invalid_argument "Database error!")
+  in
   let response = Response.of_json json in
   req |> fun _req -> Lwt.return response
 ;;
