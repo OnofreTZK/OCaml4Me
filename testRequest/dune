@@ -1,0 +1,4 @@
+(executable
+  (name test_request)
+  (libraries core cohttp opium cohttp-lwt-unix)
+  (preprocess (pps ppx_deriving_yojson)))
