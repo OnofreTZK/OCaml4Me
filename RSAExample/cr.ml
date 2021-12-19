@@ -1,15 +1,17 @@
 open Mirage_crypto_pk
 
-let private_key = Rsa.generate ~bits:64 ()
+let () = Mirage_crypto_rng_unix.initialize ()
 
-let public_key = Rsa.pub_of_priv private_key
+let private_key = Dsa.generate `Fips2048
 
-(* or_digest is a type not a function -> need to know how to represent 
- * the pub key or know if i really need this *)
-let str_private_key = match Rsa.or_digest private_key with
-                      | `Message msg -> Printf.printf "Message(?): %s\n%!" msg |> fun () -> msg
-                      | `Digest _ -> Printf.printf "What is a Cstruct??\n%!" |> fun () -> "test"
+let public_key = Dsa.pub_of_priv private_key
 
-let () = Printf.printf "Final string: %s/\n%!" str_private_key 
+let str = Z.to_string public_key.y
+let str2 = Z.to_string private_key.x
+
+(* Current problem -> How to represent the keys with a string? *)
+(*let str_private_key = Cstruct.to_string (Cstruct.create 89)*)
+
+let () = Printf.printf "Public string: %s\nPrivate String: %s\n%!" str str2
 
 
