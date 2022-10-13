@@ -10,7 +10,7 @@
 1. To open a fucking module(sig and struct)
 ```ocaml
 (* load the file *)
-#use "FileName.ml";;"
+#use "FileName.ml";;
 
 (* open the module *)
 open ModuleName;;
